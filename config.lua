@@ -23,5 +23,7 @@ Config.ShootingDetectionInterval = 500  -- Interval (in ms) to check if the play
 
 Config.NPCReportingRadius = 50.0  -- Radius for NPCs to witness shooting events
 
+Config.WebhookURL = 'YOUR_DISCORD_WEBHOOK_URL' -- Replace with your webjhook
+
 return Config
 

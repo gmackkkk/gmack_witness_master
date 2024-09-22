@@ -4,16 +4,15 @@ TriggerEvent("getCore", function(core)
     VorpCore = core
 end)
 
+Config = require('config')
+
 VorpCore.RegisterServerCallback('gmack_witness_master:witnessReport', function(source, cb, coords)
     TriggerEvent('gmack_witness_master:alertPolice', coords)
     cb()
-end) -- Add this line
-
-Config = require('config')
+end)
 
 local isPromptActive = false
 
--- Function to display notifications to police
 RegisterNetEvent('gmack_witness_master:notifyPolice')
 AddEventHandler('gmack_witness_master:notifyPolice', function(message)
     SetNotificationTextEntry('STRING')
@@ -21,7 +20,7 @@ AddEventHandler('gmack_witness_master:notifyPolice', function(message)
     DrawNotification(false, true)
 end)
 
--- Function to display a UI prompt for police to respond to a shooting
+-- Show UI prompt for police to respond to a shooting
 function ShowShootingAlertPrompt(coords)
     local scaleform = RequestScaleformMovie("instructional_buttons")
 
@@ -34,16 +33,15 @@ function ShowShootingAlertPrompt(coords)
     PushScaleformMovieFunctionParameterInt(200)
     PopScaleformMovieFunctionVoid()
 
-    -- Adding instructional buttons
     PushScaleformMovieFunction(scaleform, "SET_DATA_SLOT")
     PushScaleformMovieFunctionParameterInt(0)
-    PushScaleformMovieMethodParameterButtonName(GetControlInstructionalButton(2, 191, true)) -- Accept button (A on controller, Enter on keyboard)
+    PushScaleformMovieMethodParameterButtonName(GetControlInstructionalButton(2, 191, true)) -- Accept button
     PushScaleformMovieFunctionParameterString("Accept Shooting Alert")
     PopScaleformMovieFunctionVoid()
 
     PushScaleformMovieFunction(scaleform, "SET_DATA_SLOT")
     PushScaleformMovieFunctionParameterInt(1)
-    PushScaleformMovieMethodParameterButtonName(GetControlInstructionalButton(2, 194, true)) -- Decline button (B on controller, Backspace on keyboard)
+    PushScaleformMovieMethodParameterButtonName(GetControlInstructionalButton(2, 194, true)) -- Decline button
     PushScaleformMovieFunctionParameterString("Decline Shooting Alert")
     PopScaleformMovieFunctionVoid()
 
@@ -57,17 +55,13 @@ function ShowShootingAlertPrompt(coords)
             Citizen.Wait(0)
             DrawScaleformMovieFullscreen(scaleform, 255, 255, 255, 255, 0)
 
-            -- Detect input for Accept (Enter or A button)
-            if IsControlJustPressed(1, 191) then
-                -- Accepted the shooting alert
+            if IsControlJustPressed(1, 191) then -- Accept
                 isPromptActive = false
                 SetNewWaypoint(coords.x, coords.y)
                 TriggerEvent('gmack_witness_master:notifyPolice', 'You have accepted the shooting alert.')
             end
 
-            -- Detect input for Decline (Backspace or B button)
-            if IsControlJustPressed(1, 194) then
-                -- Declined the shooting alert
+            if IsControlJustPressed(1, 194) then -- Decline
                 isPromptActive = false
                 TriggerEvent('gmack_witness_master:notifyPolice', 'You have declined the shooting alert.')
             end
@@ -79,20 +73,18 @@ Citizen.CreateThread(function()
     while true do
         Citizen.Wait(1000)  -- Check every second
         
-        for _, playerId in ipairs(GetPlayers()) do
-            local playerPed = GetPlayerPed(playerId)
-            if IsPedShooting(playerPed) then
-                local playerCoords = GetEntityCoords(playerPed)
-                
-                -- Check for nearby NPCs
-                for _, npc in ipairs(GetAllPeds()) do
-                    if IsEntityAPed(npc) and not IsPedAPlayer(npc) then
-                        local npcCoords = GetEntityCoords(npc)
-                        if Vdist(playerCoords.x, playerCoords.y, playerCoords.z, npcCoords.x, npcCoords.y, npcCoords.z) <= 50.0 then
-                            -- Trigger server event to report shooting
-                            TriggerServerEvent('gmack_witness_master:reportShooting', playerCoords)
-                            break  -- Report only once per shooting event
-                        end
+        local playerPed = PlayerPedId()
+        if IsPedShooting(playerPed) then
+            local playerCoords = GetEntityCoords(playerPed)
+
+            -- Check for nearby NPCs
+            for _, npc in ipairs(GetAllPeds()) do
+                if IsEntityAPed(npc) and not IsPedAPlayer(npc) then
+                    local npcCoords = GetEntityCoords(npc)
+                    if Vdist(playerCoords.x, playerCoords.y, playerCoords.z, npcCoords.x, npcCoords.y, npcCoords.z) <= 50.0 then
+                        -- Trigger server event to report shooting
+                        TriggerServerEvent('gmack_witness_master:reportShooting', playerCoords)
+                        break  -- Report only once per shooting event
                     end
                 end
             end
@@ -120,15 +112,6 @@ function EnumeratePeds()
     end)
 end
 
-
-function IsPlayerPolice()
-    local PlayerData = VorpCore.getUser(source) -- Fetch player data from VORP Core
-    if PlayerData.job == 'police' then
-        return true
-    end
-    return false
-end
-
 RegisterNetEvent('gmack_witness_master:alertPolice')
 AddEventHandler('gmack_witness_master:alertPolice', function(coords)
     local playerPed = PlayerPedId()
@@ -145,17 +128,17 @@ AddEventHandler('gmack_witness_master:alertPolice', function(coords)
         AddTextComponentString(Config.Blip.BlipName)
         EndTextCommandSetBlipName(blip)
 
-        -- Notify the player with a shooting alert
+        -- Notify the player
         TriggerEvent('gmack_witness_master:notifyPolice', Config.NotificationText)
 
-        -- Show the UI prompt for the police to accept or decline the shooting report
+        -- Show the UI prompt
         ShowShootingAlertPrompt(coords)
     end
 end)
 
 Citizen.CreateThread(function()
     while true do
-        Citizen.Wait(Config.ShootingDetectionInterval)
+        Citizen.Wait(Config.ShootingDetectionInterval)  -- Use your defined interval
         local playerPed = PlayerPedId()
         if IsPedShooting(playerPed) then
             local coords = GetEntityCoords(playerPed)
@@ -164,3 +147,4 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
