@@ -1,6 +1,3 @@
--- server.lua
-
--- Function to display notifications to police
 RegisterNetEvent('gmack_witness_master:notifyPolice')
 AddEventHandler('gmack_witness_master:notifyPolice', function(message)
     SetNotificationTextEntry('STRING')
