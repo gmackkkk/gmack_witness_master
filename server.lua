@@ -5,21 +5,17 @@ AddEventHandler('gmack_witness_master:notifyPolice', function(message)
     DrawNotification(false, true)
 end)
 
--- Function to check if a player is a police officer
 local function isPolice(playerId)
     local user = exports.vorp:getUser(playerId)
     if user then
         local job = user:getJob()
-        -- Adjust the job check based on your server's job system
-        return job == 'police' -- Change this if your police job is named differently
+        return job == 'police'  -- Adjust based on your server's job naming
     end
     return false
 end
 
--- Handle shooting event from client
 RegisterNetEvent('gmack_witness_master:reportShooting')
 AddEventHandler('gmack_witness_master:reportShooting', function(coords)
-    -- Notify all police officers
     for _, playerId in ipairs(GetPlayers()) do
         if isPolice(playerId) then
             TriggerClientEvent('gmack_witness_master:alertPolice', playerId, coords)
@@ -27,10 +23,9 @@ AddEventHandler('gmack_witness_master:reportShooting', function(coords)
     end
 end)
 
--- Handle witness reporting shooting
 RegisterNetEvent('gmack_witness_master:witnessReport')
 AddEventHandler('gmack_witness_master:witnessReport', function(coords)
-    local radius = 500.0 -- Radius within which witnesses can report shootings
+    local radius = 500.0 -- Radius for reporting
     for _, playerId in ipairs(GetPlayers()) do
         local ped = GetPlayerPed(playerId)
         local playerCoords = GetEntityCoords(ped)
@@ -41,5 +36,25 @@ AddEventHandler('gmack_witness_master:witnessReport', function(coords)
         end
     end
 end)
+
+-- Handle NPCs reporting shooting events
+RegisterNetEvent('gmack_witness_master:reportNPC')
+AddEventHandler('gmack_witness_master:reportNPC', function(coords)
+    local radius = 50.0  -- Radius for NPCs to witness
+    for _, playerId in ipairs(GetPlayers()) do
+        local ped = GetPlayerPed(playerId)
+        local playerCoords = GetEntityCoords(ped)
+        -- Check if the player is within the radius of any NPCs
+        if Vdist(playerCoords.x, playerCoords.y, playerCoords.z, coords.x, coords.y, coords.z) <= radius then
+            -- Here you can implement logic to notify the police
+            for _, policeId in ipairs(GetPlayers()) do
+                if isPolice(policeId) then
+                    TriggerClientEvent('gmack_witness_master:notifyPolice', policeId, 'A local NPC reported gunshots nearby.')
+                end
+            end
+        end
+    end
+end)
+
 
 

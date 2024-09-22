@@ -1,3 +1,14 @@
+local VorpCore = {}
+
+TriggerEvent("getCore", function(core)
+    VorpCore = core
+end)
+
+VorpCore.RegisterServerCallback('gmack_witness_master:witnessReport', function(source, cb, coords)
+    TriggerEvent('gmack_witness_master:alertPolice', coords)
+    cb()
+end) -- Add this line
+
 Config = require('config')
 
 local isPromptActive = false
@@ -62,6 +73,60 @@ function ShowShootingAlertPrompt(coords)
             end
         end
     end)
+end
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(1000)  -- Check every second
+        
+        for _, playerId in ipairs(GetPlayers()) do
+            local playerPed = GetPlayerPed(playerId)
+            if IsPedShooting(playerPed) then
+                local playerCoords = GetEntityCoords(playerPed)
+                
+                -- Check for nearby NPCs
+                for _, npc in ipairs(GetAllPeds()) do
+                    if IsEntityAPed(npc) and not IsPedAPlayer(npc) then
+                        local npcCoords = GetEntityCoords(npc)
+                        if Vdist(playerCoords.x, playerCoords.y, playerCoords.z, npcCoords.x, npcCoords.y, npcCoords.z) <= 50.0 then
+                            -- Trigger server event to report shooting
+                            TriggerServerEvent('gmack_witness_master:reportShooting', playerCoords)
+                            break  -- Report only once per shooting event
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+function GetAllPeds()
+    local peds = {}
+    for ped in EnumeratePeds() do
+        table.insert(peds, ped)
+    end
+    return peds
+end
+
+function EnumeratePeds()
+    return coroutine.wrap(function()
+        local handle, ped = FindFirstPed()
+        local success
+        repeat
+            coroutine.yield(ped)
+            success, ped = FindNextPed(handle)
+        until not success
+        EndFindPed(handle)
+    end)
+end
+
+
+function IsPlayerPolice()
+    local PlayerData = VorpCore.getUser(source) -- Fetch player data from VORP Core
+    if PlayerData.job == 'police' then
+        return true
+    end
+    return false
 end
 
 RegisterNetEvent('gmack_witness_master:alertPolice')
